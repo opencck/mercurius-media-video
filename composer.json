@@ -1,0 +1,52 @@
+{
+    "name": "opencck/mercurius-media-video",
+    "description": "A small HTTP service around ffmpeg for AMPHP: frames and sound of a video, audio conversion; a module of the Mercurius agent",
+    "type": "project",
+    "license": "MIT",
+    "keywords": ["amphp", "ffmpeg", "video", "frames", "audio", "agent"],
+    "require": {
+        "php": ">=8.2",
+        "amphp/amp": "^3",
+        "amphp/byte-stream": "^2",
+        "amphp/file": "^3",
+        "amphp/http-server": "^3",
+        "amphp/process": "^2",
+        "amphp/socket": "^2",
+        "psr/log": "^3"
+    },
+    "require-dev": {
+        "amphp/phpunit-util": "^3",
+        "phpstan/phpstan": "^2",
+        "phpunit/phpunit": "^9.6",
+        "psalm/plugin-phpunit": "^0.22.2",
+        "vimeo/psalm": "^6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Mercurius\\MediaVideo\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Mercurius\\MediaVideo\\Test\\": "test/"
+        }
+    },
+    "bin": ["bin/media-video"],
+    "config": {
+        "sort-packages": true,
+        "platform": {
+            "php": "8.2.27"
+        },
+        "allow-plugins": {}
+    },
+    "scripts": {
+        "test": "php -d zend.assertions=1 -d assert.exception=1 vendor/bin/phpunit",
+        "phpstan": "phpstan analyse --no-progress --memory-limit=1G",
+        "psalm": "psalm --no-progress --show-info=false",
+        "check": [
+            "@test",
+            "@phpstan",
+            "@psalm"
+        ]
+    }
+}

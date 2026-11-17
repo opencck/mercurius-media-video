@@ -1,0 +1,36 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * The media-video service: MEDIA_VIDEO_TOKEN (required, 16+ characters), MEDIA_VIDEO_PORT (8091),
+ * MEDIA_VIDEO_HOST (0.0.0.0), MEDIA_VIDEO_MAX_MB (25), MEDIA_VIDEO_TIMEOUT (120 s).
+ */
+
+use Mercurius\MediaVideo\Ffmpeg;
+use Mercurius\MediaVideo\Server;
+use Psr\Log\NullLogger;
+
+use function Amp\trapSignal;
+
+foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php'] as $autoload) {
+    if (is_file($autoload)) {
+        require $autoload;
+        break;
+    }
+}
+
+$token = getenv('MEDIA_VIDEO_TOKEN');
+if (!is_string($token) || strlen($token) < 16) {
+    fwrite(STDERR, "MEDIA_VIDEO_TOKEN is required (16+ characters)\n");
+    exit(78);
+}
+$port = (int) (getenv('MEDIA_VIDEO_PORT') ?: 8091);
+$host = (string) (getenv('MEDIA_VIDEO_HOST') ?: '0.0.0.0');
+$maxMb = max(1, min(500, (int) (getenv('MEDIA_VIDEO_MAX_MB') ?: 25)));
+$timeout = max(10.0, min(1800.0, (float) (getenv('MEDIA_VIDEO_TIMEOUT') ?: 120)));
+$server = (new Server(new Ffmpeg(timeout: $timeout), $token, new NullLogger(), $maxMb * 1_000_000))->start($host, max(1, min(65535, $port)));
+fwrite(STDERR, sprintf("media-video listening on %s:%d\n", $host, $port));
+trapSignal([2, 15]);
+$server->stop();
