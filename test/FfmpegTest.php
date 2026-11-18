@@ -39,6 +39,28 @@ final class FfmpegTest extends AsyncTestCase {
         (new Ffmpeg())->frames('plain text, not a video', 2);
     }
 
+    public function testAPlaylistDoesNotMakeFfmpegGoToTheNetwork(): void {
+        // a server on the loopback: a playlist names it, ffmpeg must not connect
+        $server = \Amp\Socket\listen('127.0.0.1:0');
+        $address = $server->getAddress();
+        self::assertInstanceOf(\Amp\Socket\InternetAddress::class, $address);
+        $came = false;
+        \Amp\async(static function () use ($server, &$came): void {
+            if ($server->accept() !== null) {
+                $came = true;
+            }
+        })->ignore();
+        $playlist = "#EXTM3U\n#EXT-X-TARGETDURATION:1\n#EXTINF:1,\nhttp://127.0.0.1:" . $address->getPort() . "/part.ts\n#EXT-X-ENDLIST\n";
+        try {
+            (new Ffmpeg())->audio($playlist, 'wav');
+        } catch (MediaException) {
+            // nothing to read: that is the point
+        }
+        \Amp\delay(0.2);
+        $server->close();
+        self::assertFalse($came, 'ffmpeg reads files only');
+    }
+
     public function testUnknownFormat(): void {
         $this->expectException(MediaException::class);
         (new Ffmpeg())->audio('x', 'exe');

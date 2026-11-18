@@ -23,6 +23,7 @@ use function Amp\File\write;
 /**
  * ffmpeg and ffprobe as child processes: arguments as a list (no shell), two threads (a host may limit processes and
  * ffmpeg on many cores opens dozens), a time limit; every request in its own temporary folder, removed afterwards.
+ * Inputs are read with `-protocol_whitelist file`: a playlist inside a file cannot make ffmpeg go to the network.
  */
 final class Ffmpeg implements Transcoder {
     public const FORMATS = ['mp3' => ['libmp3lame', 'mp3'], 'wav' => ['pcm_s16le', 'wav'], 'ogg' => ['libopus', 'ogg'], 'm4a' => ['aac', 'mp4']];
@@ -40,7 +41,7 @@ final class Ffmpeg implements Transcoder {
             $input = $dir . '/input';
             write($input, $video);
             $seconds = $this->seconds($input);
-            $this->run([$this->ffmpeg, '-nostdin', '-v', 'error', '-threads', '2', '-filter_threads', '1', '-y', '-i', $input,
+            $this->run([$this->ffmpeg, '-nostdin', '-v', 'error', '-threads', '2', '-filter_threads', '1', '-y', '-protocol_whitelist', 'file', '-i', $input,
                 '-vf', sprintf('fps=%d/%d,scale=768:-2', $count, max(1, (int) ceil($seconds))), '-frames:v', (string) $count, $dir . '/frame-%02d.jpg']);
             $frames = [];
             $names = listFiles($dir);
@@ -55,7 +56,7 @@ final class Ffmpeg implements Transcoder {
             }
             $audio = null;
             try {
-                $this->run([$this->ffmpeg, '-nostdin', '-v', 'error', '-threads', '2', '-y', '-i', $input, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '48k', '-f', 'mp4', $dir . '/audio.m4a']);
+                $this->run([$this->ffmpeg, '-nostdin', '-v', 'error', '-threads', '2', '-y', '-protocol_whitelist', 'file', '-i', $input, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '48k', '-f', 'mp4', $dir . '/audio.m4a']);
                 $audio = exists($dir . '/audio.m4a') ? read($dir . '/audio.m4a') : null;
             } catch (MediaException) {
                 // a video without sound
@@ -68,7 +69,7 @@ final class Ffmpeg implements Transcoder {
         [$codec, $container] = self::FORMATS[$format] ?? throw new MediaException('format is one of: ' . implode(', ', array_keys(self::FORMATS)));
         return $this->inFolder(function (string $dir) use ($input, $codec, $container): string {
             write($dir . '/input', $input);
-            $this->run([$this->ffmpeg, '-nostdin', '-v', 'error', '-threads', '2', '-y', '-i', $dir . '/input', '-vn', '-ac', '1', '-ar', '16000', '-c:a', $codec, '-f', $container, $dir . '/output']);
+            $this->run([$this->ffmpeg, '-nostdin', '-v', 'error', '-threads', '2', '-y', '-protocol_whitelist', 'file', '-i', $dir . '/input', '-vn', '-ac', '1', '-ar', '16000', '-c:a', $codec, '-f', $container, $dir . '/output']);
             return read($dir . '/output');
         });
     }
@@ -76,7 +77,7 @@ final class Ffmpeg implements Transcoder {
     /** The length of the media in seconds; 1 when ffprobe cannot tell. */
     private function seconds(string $input): float {
         try {
-            $out = $this->run([$this->ffprobe, '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', $input]);
+            $out = $this->run([$this->ffprobe, '-v', 'error', '-protocol_whitelist', 'file', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', $input]);
         } catch (MediaException) {
             return 1.0;
         }
