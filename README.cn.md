@@ -1,5 +1,7 @@
 [English](README.md) | [Русский](README.ru.md) | **中文**
 
+> 本文由模型翻译，尚未经人工审校；如有出入，以英文版为准。
+
 # mercurius-media-video
 
 一个基于 [AMPHP](https://amphp.org) 围绕 ffmpeg 构建的小型 HTTP 服务：提取视频的画面帧和声音，并进行音频转换。它是 [Mercurius](https://github.com/opencck/mercurius) 的一个模块，也可以单独使用。模块运行时，智能体会把视频转成画面帧和语音，供不能观看视频的模型使用。没有它智能体照样能工作，
